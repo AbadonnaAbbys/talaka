@@ -1,0 +1,57 @@
+.bottom_space {
+    margin-bottom: 10px;
+}
+.note {
+    padding: 10px;
+    background-color: #FCFCFC;
+    border-radius: 5px;
+}
+.note:hover {
+    background-color: aliceblue;
+}
+
+.note > .text {
+    background-color: #ffffff;
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.sample {
+    display: none;
+}
+
+.center {
+    text-align: center;
+}
+
+#form {
+    margin-bottom: 40px;
+}
+
+#edit {
+    display: none;
+}
+
+body, header, main {
+    width: 900px;
+    margin: auto;
+}
+
+input[type="text"], textarea {
+     width: 100%;
+}
+
+.timestamp {
+    text-align: right;
+    font-family: monospace;
+    font-size: small;
+    color: #999;
+    float: right;
+}
+#addNote {
+    border-radius: 15px;
+}
+.delete {
+    float: right;
+    margin-left: 10px;
+}
