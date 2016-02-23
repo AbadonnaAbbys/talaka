@@ -2,6 +2,10 @@
  * Created by Abadonna on 03.02.2016.
  */
 $(document).ready(function () {
+
+    //var target = 'local';
+    var target = 'server';
+
     /**
      *
      * @type {*|jQuery|HTMLElement}
@@ -52,6 +56,14 @@ $(document).ready(function () {
         second: 'numeric'
     };
 
+    var ajaxOptions = {
+        type: "POST",
+        url: "/service.php",
+        data: {
+            action: "getAllRecords",
+        }
+    };
+
     if (!('notes' in localStorage)) {
         localStorage['notes'] = '';
     }
@@ -62,19 +74,43 @@ $(document).ready(function () {
      * @returns {boolean}
      */
     var saveChanges = function (e) {
-        var note = e.data.note;
         var noteBlock = e.data.noteBlock;
-        var notes = JSON.parse(localStorage['notes']);
 
-        for (var i = 0; i < notes.length; i++) {
-            if (notes[i].id == note.id) {
-                note.title = noteBlock.children('h2:first').text();
-                note.text = noteBlock.children('div.text').text();
-                note.timeEdit = new Date();
-                notes[i] = note;
-                localStorage['notes'] = JSON.stringify(notes);
-                return true;
+        e.data.note.title = noteBlock.children('h2:first').text();
+        e.data.note.text = noteBlock.children('div.text').text();
+        e.data.note.timeEdit = new Date();
+
+        if ('local' == target) {
+            var notes = JSON.parse(localStorage['notes']);
+
+            for (var i = 0; i < notes.length; i++) {
+                if (notes[i].id == e.data.note.id) {
+                    notes[i] = e.data.note;
+                    localStorage['notes'] = JSON.stringify(notes);
+                    return true;
+                }
             }
+        } else {
+            var options = JSON.parse(JSON.stringify(ajaxOptions));
+            //options.data = note;
+            options.data.action = 'setRecord';
+            options.data.id = e.data.note.id;
+            options.data.title = e.data.note.title;
+            options.data.text = e.data.note.text;
+            options.data.timeAdd = e.data.note.timeAdd.toISOString();
+            options.data.timeEdit = e.data.note.timeEdit.toISOString();
+            $.ajax(options).done(function(data) {
+                if (data.code == '200') {
+                    var tmp = JSON.parse(data.data);
+
+                    e.data.note.id = tmp.id;
+                    e.data.note.title = tmp.title;
+                    e.data.note.text = tmp.text;
+                    e.data.note.timeAdd = new Date(e.data.note.timeAdd);
+                    e.data.note.timeEdit = new Date(e.data.note.timeEdit);
+                    e.data.noteBlock.attr('id', 'note' + e.data.note.id);
+                }
+            });
         }
         return false;
     };
@@ -82,10 +118,9 @@ $(document).ready(function () {
     /**
      *
      * @param note
-     * @param position
      * @param direction
      */
-    var drawNote = function (note, position, direction) {
+    var drawNote = function (note, direction) {
         var noteBlock = noteBlockSample.clone();
         var timeAdd = new Date(note.timeAdd);
         var timeEdit = new Date(note.timeEdit);
@@ -109,19 +144,22 @@ $(document).ready(function () {
         }
     };
 
-    var showNotes = function () {
-        if (localStorage['notes']) {
-            var notes = JSON.parse(localStorage['notes']);
-            for (var i = 0; i < notes.length; i++) {
-                drawNote(notes[i], i, 1);
-            }
+    /**
+     *
+     * @param data
+     * @returns {boolean}
+     */
+    var showNotes = function (data) {
+        var notes = data;
+        for (var i = 0; i < notes.length; i++) {
+            drawNote(notes[i], 1);
         }
         return false;
     };
 
     inputAdd.on('click', function () {
         var notes = [];
-        var note = {
+        note = {
             'id': '',
             'title': 'Title',
             'text': 'text',
@@ -129,32 +167,59 @@ $(document).ready(function () {
             'timeEdit': new Date()
         }
 
-        if (localStorage['notes']) {
-            notes = JSON.parse(localStorage['notes']);
+        if ('local' == target) {
+            if (localStorage['notes']) {
+                notes = JSON.parse(localStorage['notes']);
+            }
+            note.id = notes.length;
+            notes.unshift(note);
+            localStorage['notes'] = JSON.stringify(notes);
         }
-        note.id = notes.length;
-        notes.unshift(note);
-        localStorage['notes'] = JSON.stringify(notes);
-        drawNote(note, notes.length, 0);
+        drawNote(note, 0);
     });
 
-    $('#list').on('click', '.note .delete', function(e) {
+    $('#list').on('click', '.note .delete', function (e) {
         var node = $(e.target.parentNode);
         var notes = JSON.parse(localStorage['notes']);
 
-        for (var i = 0; i < notes.length; i++) {
-            //console.log(notes[i].id, node.data['id'], notes[i].id == node.data['id']);
-            console.log(node);
-            if (notes[i].id == node.data('note').id) {
-                notes.splice(i, 1);
-                localStorage['notes'] = JSON.stringify(notes);
-                node.remove();
-                return true;
+        if ('local' == target) {
+            for (var i = 0; i < notes.length; i++) {
+                if (notes[i].id == node.data('note').id) {
+                    notes.splice(i, 1);
+                    localStorage['notes'] = JSON.stringify(notes);
+                    node.remove();
+                    return true;
+                }
             }
+        } else {
+            var options = JSON.parse(JSON.stringify(ajaxOptions));
+            options.data.action = 'deleteRecord';
+            options.data.id = node.data('note').id;
+            $.ajax(options).done(function(data) {
+                if (data.data) {
+                    node.remove();
+                    return true;
+                }
+            });
         }
+
         return false;
     });
 
-    showNotes();
 
+    if ('local' == target) {
+        showNotes(JSON.parse(localStorage['notes']));
+    } else {
+        $.ajax(ajaxOptions).done(function (data) {
+            var notes = [];
+            for (var i = 0; i < data.data.length; i++) {
+                notes[i] = JSON.parse(data.data[i]);
+                notes[i].timeAdd = new Date(notes[i].timeAdd);
+                notes[i].timeEdit = new Date(notes[i].timeEdit);
+            }
+            showNotes(notes);
+        }).fail(function() {
+            alert('error');
+        });
+    }
 });

@@ -12,15 +12,19 @@ namespace Sources;
 abstract class Source {
   const SECTION = '';
 
-  public static function initial(Array $config) {
-    $class = get_called_class();
-    $instance = new $class($config[static::SECTION]);
-
+  /**
+   * @return Source
+   * @throws \Exception
+   */
+  public static function initial() {
+    $class = __NAMESPACE__ . '\\' . \Config::getParam('class');
+    $instance = new $class(\Config::getParam($class::SECTION));
     return $instance;
   }
+
   /**
    * @param $id
-   * @return Record
+   * @return \Record
    */
   abstract public function getRecord($id);
 
@@ -30,14 +34,18 @@ abstract class Source {
   abstract public function getAllRecords();
 
   /**
-   * @param Record $data
+   * @param \Record $data
    * @return bool
    */
-  abstract public function setRecord(Record $data);
+  abstract public function setRecord(\Record $data);
 
   /**
    * @param $id
    * @return bool
    */
   abstract public function deleteRecord($id);
+
+  abstract public function getLastId();
+
+  abstract public function getNextId();
 }

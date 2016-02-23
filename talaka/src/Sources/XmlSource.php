@@ -8,9 +8,23 @@
 
 namespace Sources;
 
+/**
+ * Class XmlSource
+ * @package Sources
+ */
 class XmlSource extends Source {
 
   const SECTION = 'xml';
+
+  const ATTR_LAST_ID = 'lastId';
+  const ATTR_TIME_ADD = 'timeAdd';
+  const ATTR_TIME_EDIT = 'timeEdit';
+  const ATTR_ID = 'xml:id';
+
+  const NODE_LIST = 'list';
+  const NODE_NOTE = 'note';
+  const NODE_TITLE = 'title';
+  const NODE_TEXT = 'text';
 
   /**
    * @var array
@@ -27,6 +41,11 @@ class XmlSource extends Source {
    */
   private $doc;
 
+  /**
+   * @var integer
+   */
+  private $lastId = null;
+
   public function __construct($data) {
 
     $this->config = $data;
@@ -35,29 +54,28 @@ class XmlSource extends Source {
 
   /**
    * @param $id
-   * @return \Sources\Record
+   * @return \Record
    */
   public function getRecord($id) {
     $node = $this->doc->getElementById($this->prepareId($id));
-    $record = new Record($this->getNodeData($node));
+    $record = new \Record($this->getNodeData($node));
 
     return $record;
   }
 
   public function getAllRecords() {
     $list = [];
-    foreach ($this->doc->getElementsByTagName('note') as $node) {
-
-      $list[] = $this->prepareRecord($node);
+    foreach ($this->doc->getElementsByTagName(self::NODE_NOTE) as $node) {
+      $list[] = new \Record($this->getNodeData($node));
     }
     return $list;
   }
 
   /**
-   * @param Record $data
+   * @param \Record $data
    * @return $this
    */
-  public function setRecord(Record $data) {
+  public function setRecord(\Record $data) {
     if ($data->isNew()) {
       $this->insertRecord($data->getDataArray());
     }
@@ -71,17 +89,18 @@ class XmlSource extends Source {
   }
 
   /**
-   * @param Record $data
+   * @param \Record $data
    * @return $this
    */
-  private function updateRecord(Record $data) {
+  private function updateRecord(\Record $data) {
     $noteNode = $this->doc->getElementById($this->prepareId($data->getId()));
 
-    $noteNode->setAttribute('timeAdd', $data->getTimeAdd()->format(Record::DATE_FORMAT));
-    $noteNode->setAttribute('timeEdit', (new \DateTime())->format(Record::DATE_FORMAT) );
+    $noteNode->setAttribute(self::ATTR_TIME_ADD, $data->getTimeAdd()
+      ->format(\Config::getParam('date_format')));
+    $noteNode->setAttribute(self::ATTR_TIME_EDIT, (new \DateTime())->format(\Config::getParam('date_format')));
 
-    $noteNode->getElementsByTagName('title')[0]->nodeValue = $data->getTitle();
-    $noteNode->getElementsByTagName('text')[0]->nodeValue = $data->getText();
+    $noteNode->getElementsByTagName(self::NODE_TITLE)[0]->nodeValue = $data->getTitle();
+    $noteNode->getElementsByTagName(self::NODE_TEXT)[0]->nodeValue = $data->getText();
 
     return $this;
   }
@@ -91,26 +110,26 @@ class XmlSource extends Source {
    * @return $this
    */
   private function insertRecord($data) {
-    /** @var \DOMNode $listNode */
-    $listNode = $this->doc->getElementsByTagName('list')[0];
 
-    $id = (int) $listNode->getAttribute('lastId');
-    $listNode->setAttribute('lastId', ++$id);
+    $listNode = $this->getNodeList();
 
-    $noteNode = $this->doc->createElement('note');
-    $noteNode->setAttribute('timeAdd', $data['timeAdd']);
-    $noteNode->setAttribute('timeEdit', $data['timeEdit']);
+    $this->lastId = $this->getNextId();
+    $this->setLastId($this->lastId);
 
-    $titleNode = $this->doc->createElement('title', $data['title']);
-    $textNode = $this->doc->createElement('text', $data['text']);
+    $noteNode = $this->doc->createElement(self::NODE_NOTE);
+    $noteNode->setAttribute(self::ATTR_TIME_ADD, $data[self::ATTR_TIME_ADD]);
+    $noteNode->setAttribute(self::ATTR_TIME_EDIT, $data[self::ATTR_TIME_EDIT]);
+
+    $titleNode = $this->doc->createElement(self::NODE_TITLE, $data[self::NODE_TITLE]);
+    $textNode = $this->doc->createElement(self::NODE_TEXT, $data[self::NODE_TEXT]);
     $noteNode->appendChild($titleNode);
     $noteNode->appendChild($textNode);
 
-    $idAttr = $this->doc->createAttribute('xml:id');
-    $idTextNode = $this->doc->createTextNode($this->prepareId($id));
+    $idAttr = $this->doc->createAttribute(self::ATTR_ID);
+    $idTextNode = $this->doc->createTextNode($this->prepareId($this->lastId));
     $idAttr->appendChild($idTextNode);
     $noteNode->appendChild($idAttr);
-    $noteNode->setIdAttribute('xml:id', TRUE);
+    $noteNode->setIdAttribute(self::ATTR_ID, TRUE);
 
     $listNode->appendChild($noteNode);
 
@@ -129,13 +148,16 @@ class XmlSource extends Source {
 
   /**
    * @param $id
-   * @return $this
+   * @return bool
    */
   public function deleteRecord($id) {
-    $node = $this->doc->getElementById($id);
-    $node->parentNode->removeChild($node);
-
-    return $this;
+    $noteNode = $this->doc->getElementById($this->prepareId($id));
+    if ($noteNode instanceof \DOMElement) {
+      $noteNode->parentNode->removeChild($noteNode);
+      $this->doc->save($this->filename);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -157,8 +179,8 @@ class XmlSource extends Source {
    */
   private function createFile() {
     $this->doc = new \DOMDocument();
-    $rootNode = $this->doc->createElement('list');
-    $rootNode->setAttribute('lastId', 0);
+    $rootNode = $this->doc->createElement(self::NODE_LIST);
+    $rootNode->setAttribute(self::ATTR_LAST_ID, 1);
     $this->doc->appendChild($rootNode);
     $this->doc->save($this->filename);
     return $this;
@@ -177,13 +199,45 @@ class XmlSource extends Source {
    * @return array
    */
   private function getNodeData(\DOMElement $node) {
-    $data = [];
-    $data['id'] = substr($node->getAttribute('xml:id'), 3);
-    $data['timeAdd'] = $node->getAttribute('timeAdd');
-    $data['timeEdit'] = $node->getAttribute('timeEdit');
-    $data['title'] = $node->getElementsByTagName('title')[0]->nodeValue;
-    $data['text'] = $node->getElementsByTagName('text')[0]->nodeValue;
+    $data = array();
+    $data['id'] = substr($node->getAttribute(self::ATTR_ID), 3);
+    $data[self::ATTR_TIME_ADD] = $node->getAttribute(self::ATTR_TIME_ADD);
+    $data[self::ATTR_TIME_EDIT] = $node->getAttribute(self::ATTR_TIME_EDIT);
+    $data[self::NODE_TITLE] = $node->getElementsByTagName(self::NODE_TITLE)[0]->nodeValue;
+    $data[self::NODE_TEXT] = $node->getElementsByTagName(self::NODE_TEXT)[0]->nodeValue;
 
     return $data;
+  }
+
+  /**
+   * @return int
+   */
+  public function getLastId() {
+    return $this->lastId;
+  }
+
+  /**
+   * @return int
+   */
+  public function getNextId() {
+    return (int) $this->getNodeList()->getAttribute(self::ATTR_LAST_ID) + 1;
+  }
+
+  /**
+   * @param $id
+   * @return $this
+   */
+  private function setLastId($id) {
+    $nodeList = $this->getNodeList();
+    $nodeList->setAttribute(self::ATTR_LAST_ID, $id);
+    $this->doc->appendChild($nodeList);
+    return $this;
+  }
+
+  /**
+   * @return \DOMElement
+   */
+  private function getNodeList() {
+    return $this->doc->getElementsByTagName(self::NODE_LIST)[0];
   }
 }

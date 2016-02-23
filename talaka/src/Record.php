@@ -6,12 +6,7 @@
  * Time: 16:13
  */
 
-namespace Sources;
-
-
 class Record {
-
-  const DATE_FORMAT = 'Y-m-d H:i:s';
 
   /**
    * @var integer
@@ -150,19 +145,33 @@ class Record {
     return $this;
   }
 
-  public function getDataArray() {
-    return [
+  /**
+   * @param bool $isJson
+   * @return array
+   * @throws \Exception
+   */
+  public function getDataArray($isJson = false) {
+    $data = [
+      'id' => $this->id,
       'title' => $this->title,
       'text' => $this->text,
-      'timeAdd' => $this->timeAdd->format(self::DATE_FORMAT),
-      'timeEdit' => $this->timeEdit->format(self::DATE_FORMAT),
+      'timeAdd' => $isJson ? $this->timeAdd->format(DATE_W3C) : $this->timeAdd->format(Config::getParam('date_format')),
+      'timeEdit' => $isJson ? $this->timeEdit->format(DATE_W3C) : $this->timeEdit->format(Config::getParam('date_format')),
     ];
+    return $data;
   }
 
   /**
    * @return bool
    */
   public function isNew() {
-    return $this->id === null;
+    return empty($this->id);
+  }
+
+  /**
+   * @return string
+   */
+  public function getJSON() {
+    return json_encode($this->getDataArray(true));
   }
 }
