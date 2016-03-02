@@ -72,7 +72,12 @@ class PdoSource extends Source {
       return $stmt->execute(['id' => $data->getId(), 'data' => serialize($data)]);
     } else {
       $stmt = $this->pdo->prepare('INSERT INTO `note` SET `data` = :data');
-      return $stmt->execute(['data' => serialize($data)]);
+      $res = $stmt->execute(['data' => serialize($data)]);
+      if ($res) {
+        $data->setId($this->pdo->lastInsertId());
+        $res = $this->setRecord($data);
+      }
+      return $res;
     }
   }
 
