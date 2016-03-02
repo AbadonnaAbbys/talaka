@@ -6,6 +6,14 @@
  * Date: 19.02.2016
  * Time: 12:18
  */
+
+/**
+ * Class Controller
+ * Осуществляет обработку запросов от клиентской части.
+ * Принимаются только POST запросы.
+ * Принимаются только запросы на действия, перечисленные в массиве $actions.
+ *
+ */
 class Controller {
   /**
    * @var array
@@ -23,9 +31,10 @@ class Controller {
   private $source;
 
   /**
+   * Каждый элемент массива содержит имя обработчика. Т.е. для каждого имени должен реально существовать обработчик.
    * @var array
    */
-  private $actions = ['getRecord', 'setRecord', 'deleteRecord', 'getAllRecords', 'setRecords'];
+  private $actions = ['getRecord', 'setRecord', 'deleteRecord', 'getAllRecords'];
 
   /**
    * Controller constructor.

@@ -8,14 +8,27 @@
 
 namespace Sources;
 
+/**
+ * Class PdoSource
+ * @package Sources
+ */
 class PdoSource extends Source {
 
+  /**
+   * Секция файла конфигурации
+   */
   const SECTION = 'pdo';
 
+  /**
+   * Строка шаблона инициализации соединения с базой данных
+   */
   const DSN = '%s:host=%s;dbname=%s;charset=%s';
 
+  /**
+   * Опции инициализации соединения с базой данных
+   */
   const OPTIONS = array(
-    \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
+    \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
     \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC
   );
 
@@ -39,6 +52,7 @@ class PdoSource extends Source {
   }
 
   /**
+   * Возвращает заметку по id
    * @param $id
    * @return \Record
    */
@@ -50,6 +64,7 @@ class PdoSource extends Source {
   }
 
   /**
+   * Возвращает массив из всех заметок
    * @return array
    */
   public function getAllRecords() {
@@ -63,14 +78,19 @@ class PdoSource extends Source {
   }
 
   /**
+   * Сохраняет заметку
    * @param \Record $data
    * @return bool
    */
   public function setRecord(\Record $data) {
     if (!empty($data->getId())) {
       $stmt = $this->pdo->prepare('UPDATE `note` SET `data` = :data WHERE `id` = :id');
-      return $stmt->execute(['id' => $data->getId(), 'data' => serialize($data)]);
-    } else {
+      return $stmt->execute([
+        'id' => $data->getId(),
+        'data' => serialize($data)
+      ]);
+    }
+    else {
       $stmt = $this->pdo->prepare('INSERT INTO `note` SET `data` = :data');
       $res = $stmt->execute(['data' => serialize($data)]);
       if ($res) {
@@ -82,6 +102,7 @@ class PdoSource extends Source {
   }
 
   /**
+   * Удаляет заметку
    * @param $id
    * @return bool
    */
@@ -91,19 +112,21 @@ class PdoSource extends Source {
   }
 
   /**
-   * @return string
+   * Возвращает id последней добавленной записи
+   * @return int
    */
   public function getLastId() {
-    return $this->pdo->lastInsertId();
+    return (int) $this->pdo->lastInsertId();
   }
 
   /**
-   * @return mixed
+   * Возвращает id на единицу больше, чем у последней добавленной записи
+   * @return int
    */
   public function getNextId() {
     $stmt = $this->pdo->query('SELECT MAX(`id`) + 1 AS next_id LIMIT 0,1');
     $stmt->execute();
-    return $stmt->fetch()['next_id'];
+    return (int) $stmt->fetch()['next_id'];
   }
 
   /**

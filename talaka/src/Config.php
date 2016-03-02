@@ -6,6 +6,10 @@
  * Date: 18.02.2016
  * Time: 16:43
  */
+
+/**
+ * Class Config
+ */
 class Config {
 
   /**
@@ -42,6 +46,7 @@ class Config {
   }
 
   /**
+   * Возвращает значение заданного параметра конфигурации
    * @param $name
    * @return mixed
    * @throws \Exception

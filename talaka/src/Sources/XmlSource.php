@@ -14,6 +14,9 @@ namespace Sources;
  */
 class XmlSource extends Source {
 
+  /**
+   * Секция файла конфигурации
+   */
   const SECTION = 'xml';
 
   const ATTR_LAST_ID = 'lastId';
@@ -46,6 +49,10 @@ class XmlSource extends Source {
    */
   private $lastId = null;
 
+  /**
+   * XmlSource constructor.
+   * @param $data
+   */
   public function __construct($data) {
 
     $this->config = $data;
@@ -53,6 +60,7 @@ class XmlSource extends Source {
   }
 
   /**
+   * Возвращает заметку по id
    * @param $id
    * @return \Record
    */
@@ -63,6 +71,10 @@ class XmlSource extends Source {
     return $record;
   }
 
+  /**
+   * Возвращает массив из всех заметок
+   * @return array
+   */
   public function getAllRecords() {
     $list = [];
     foreach ($this->doc->getElementsByTagName(self::NODE_NOTE) as $node) {
@@ -72,6 +84,7 @@ class XmlSource extends Source {
   }
 
   /**
+   * Сохраняет заметку
    * @param \Record $data
    * @return $this
    */
@@ -139,6 +152,7 @@ class XmlSource extends Source {
   }
 
   /**
+   * Форматирует id заметки для xml ноды
    * @param $id
    * @return string
    */
@@ -147,6 +161,7 @@ class XmlSource extends Source {
   }
 
   /**
+   * Удаляет заметку
    * @param $id
    * @return bool
    */
@@ -161,6 +176,7 @@ class XmlSource extends Source {
   }
 
   /**
+   * Читает заметки из файла
    * @return $this
    */
   private function readNotes() {
@@ -175,6 +191,7 @@ class XmlSource extends Source {
   }
 
   /**
+   * Создает файл хранилища
    * @return $this
    */
   private function createFile() {
@@ -187,6 +204,7 @@ class XmlSource extends Source {
   }
 
   /**
+   * Формирует относительный путь к файлу хранилища в соответствии с настройками
    * @return $this
    */
   private function prepareFileName() {
@@ -195,6 +213,7 @@ class XmlSource extends Source {
   }
 
   /**
+   * Возвращает данные из заметки в хранилище в виде массива
    * @param \DOMElement $node
    * @return array
    */
@@ -210,6 +229,7 @@ class XmlSource extends Source {
   }
 
   /**
+   * Возвращает id последней добавленной записи
    * @return int
    */
   public function getLastId() {
@@ -217,6 +237,7 @@ class XmlSource extends Source {
   }
 
   /**
+   * Возвращает id на единицу больше, чем у последней добавленной записи
    * @return int
    */
   public function getNextId() {
@@ -224,6 +245,7 @@ class XmlSource extends Source {
   }
 
   /**
+   * Сохраняет id последней добавленной записи в хранилище
    * @param $id
    * @return $this
    */

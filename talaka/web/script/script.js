@@ -155,6 +155,7 @@ $(document).ready(function () {
             this.options.data.timeEdit = this.timeEdit.toISOString();
             this.request = $.ajax(this.options);
             this.request.done($.proxy(this.updateFromServer, this));
+            this.setStatusDone();
         };
         /**
          *
@@ -199,7 +200,8 @@ $(document).ready(function () {
             if ('local' == target) {
                 this.saveToLocal();
             } else {
-                this.saveToServer();
+                this.setStatusSave();
+                //this.saveToServer();
             }
         };
         /**
@@ -249,6 +251,7 @@ $(document).ready(function () {
             this.options.data.id = this.id;
 
             this.request = $.ajax(this.options).done($.proxy(this.remove, this));
+            this.setStatusDone();
         };
         this.deleteFromLocal = function () {
             var notes = JSON.parse(localStorage['notes']);
@@ -269,7 +272,8 @@ $(document).ready(function () {
             if ('local' == target) {
                 this.deleteFromLocal();
             } else {
-                this.deleteFromServer();
+                this.setStatusDelete();
+                //this.deleteFromServer();
             }
         };
         /**
@@ -277,13 +281,17 @@ $(document).ready(function () {
          * Выполняет следующий запрос в случае, если выполнен предыдущий запрос
          */
         this.do = function () {
-            if ('server' == target) {
-                if (this.request && this.request.readyState == 4) {
-                    if (this.status == 'save') {
-                        this.saveToServer();
-                    } else if (this.status == 'delete') {
-                        this.deleteFromServer();
-                    }
+            if (this.request && this.request.readyState == 4) {
+                if (this.status == 'save') {
+                    this.saveToServer();
+                } else if (this.status == 'delete') {
+                    this.deleteFromServer();
+                }
+            } else {
+                if (this.status == 'save') {
+                    this.saveToServer();
+                } else if (this.status == 'delete') {
+                    this.deleteFromServer();
                 }
             }
         };
@@ -309,8 +317,9 @@ $(document).ready(function () {
             this.block = noteBlockSample.clone();
             this.block.attr('id', 'node' + this.id);
             this.block.children('h2').text(this.title).prop('contentEditable', true).on('input', $.proxy(this.save, this));
-            this.block.children('div.timestamp').text(this.timeEdit.toLocaleDateString('ru', timeOptions));
+            this.block.children('div.timestamp').text(this.timeAdd.toLocaleDateString('ru', timeOptions));
             this.block.children('div.text').text(this.text).prop('contentEditable', true).on('input', $.proxy(this.save, this));
+            this.block.children('.delete').on('click', $.proxy(this.delete, this));
             this.block.data('note', this);
             if (direction == 0) {
                 listBlock.prepend(this.block);
@@ -321,17 +330,27 @@ $(document).ready(function () {
         };
 
         /**
-         * Запускает обработчик очереди запросов 1 раз в секунду
+         * Запускает обработчик очереди запросов 1 раз в секунду. Только для удаленного хранилища
          */
-        setInterval(this.do, 1000);
+        if ('server' == target) {
+            setInterval($.proxy(this.do, this), 1000);
+        }
     }
 
     if (!('notes' in localStorage)) {
         localStorage['notes'] = '';
     }
 
+    /**
+     * Список заметок
+     * @type {Array}
+     */
     var notes = [];
 
+    /**
+     * Выводит на страницу набор заметок
+     * @param data
+     */
     var showNotes = function (data) {
         if (data) {
             for (var i = 0; i < data.length; i++) {
@@ -342,33 +361,36 @@ $(document).ready(function () {
         }
     };
 
+    /**
+     * Добавляет на страницу новую заметку по клику на кнопке
+     */
     inputAdd.on('click', function () {
         var note = new Note(ajaxOptions);
         note.draw(0);
         note.save();
     });
 
-    $('#list').on('click', '.note .delete', function (e) {
-        var node = $(e.target.parentNode);
-
-        node.data('note').delete();
-
-
-        return false;
-    });
-
+    /**
+     * Переключает место хранения заметок. При этом страница перезагружается.
+     */
     $("input:radio[name=target]").on('change', function () {
         target = $(this).val();
         localStorage['target'] = target;
         location.reload();
     });
 
+    /**
+     * Устанавливаем сохраненное расположение хранилища. Если сохраненного значения нет, устанавливаем расположение по умолчанию.
+     */
     if (localStorage['target']) {
         target = localStorage['target'];
-        $("input:radio[name=target][value=" + target + "]").prop('checked', true);
     }
     localStorage['target'] = target;
+    $("input:radio[name=target][value=" + target + "]").prop('checked', true);
 
+    /**
+     * Загружаем и выводим заметки, хранящиеся в установленном хранилище
+     */
     if ('local' == target) {
         var data;
         if (localStorage.getItem('notes')) {

@@ -6,6 +6,9 @@
  * Time: 16:13
  */
 
+/**
+ * Class Record
+ */
 class Record {
 
   /**
