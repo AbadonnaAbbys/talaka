@@ -1,17 +1,20 @@
 {
   "name": "talaka",
+  "homepage": "https://github.com/AbadonnaAbbys/talaka",
   "authors": [
     "Abadonna <abadonna@tut.by>"
   ],
   "description": "",
   "main": "",
-  "moduleType": [],
+  "moduleType": [
+    "globals"
+  ],
   "license": "MIT",
-  "homepage": "",
   "private": true,
   "ignore": [
     "**/.*",
     "node_modules",
+    "bower_components",
     "test",
     "tests"
   ],
